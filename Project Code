@@ -1,0 +1,121 @@
+//------------------------Code to receive the IR codes from remote---------------------------------
+//#include <IRLibRecvPCI.h> 
+
+//IRrecvPCI myReceiver(5);//pin number for the receiver
+
+//void setup() {
+//  Serial.begin(9600);
+//  delay(2000); while (!Serial); //delay 
+//  myReceiver.enableIRIn(); // Start the receiver
+//  Serial.println(("Ready to receive IR signals"));
+//  myReceiver.setFrameTimeout(100000);
+//}
+//
+//void loop() {
+//  //this code will loop until all the IR codes/numbers are received from the remote
+//  if (myReceiver.getResults()) { 
+//    Serial.println(("designated location in rawSend.ino"));
+//    Serial.print(("\n#define RAW_DATA_LEN "));
+//    Serial.println(recvGlobal.recvLength,DEC);
+//    Serial.print(("uint16_t rawData[RAW_DATA_LEN]={\n\t"));
+//    for(bufIndex_t i=1;i<recvGlobal.recvLength;i++) {
+//      Serial.print(recvGlobal.recvBuffer[i],DEC);
+//      Serial.print((", "));
+//      if( (i % 8)==0) Serial.print(("\n\t"));
+//    }
+//    Serial.println(("1000};"));
+//    myReceiver.enableIRIn();      
+//  }
+//}
+//--------------------------------Code to transmit the IR signal via IR LED to AC unit----------------------------------------------------------
+#include <IRLibSendBase.h>    
+#include <IRLib_HashRaw.h>    
+#include <LiquidCrystal.h>
+#include <DHT.h>
+
+#define DHTPIN A0     // what pin we're connected to
+#define DHTTYPE DHT11   // DHT 11  (AM2302)
+DHT dht(DHTPIN, DHTTYPE); // Initialize DHT sensor for normal 16mhz Arduino
+
+float hum;  //Stores humidity value
+float temp; //Stores temperature value
+int led = 5; //pin that the LEd is connected to
+
+IRsendRaw mySender;
+
+LiquidCrystal lcd(8,9,10,11,12,13); // make a lcd object
+
+void setup() {
+  Serial.begin(9600);
+  Serial.println("DHT11 Humidity & temperature Sensor\n\n");
+  dht.begin();
+  lcd.begin(16,2);
+  pinMode(led, OUTPUT);
+}
+ 
+//IR codes for turning ON the AC unit
+uint16_t rawDataOn[100]={
+  3142, 1686, 294, 502, 290, 1298, 294, 506, 
+  290, 502, 294, 1298, 290, 506, 294, 1298, 
+  290, 506, 290, 506, 290, 1302, 290, 1302, 
+  290, 1298, 290, 506, 290, 1302, 290, 506, 
+  290, 1302, 290, 1298, 294, 1298, 290, 506, 
+  290, 506, 290, 506, 290, 506, 290, 1302, 
+  290, 1302, 290, 502, 290, 1306, 290, 502, 
+  290, 1302, 290, 1302, 290, 506, 290, 506, 
+  290, 502, 294, 1298, 294, 502, 290, 1302, 
+  290, 506, 290, 506, 290, 1302, 290, 1302, 
+  290, 1298, 294, 1298, 294, 1298, 290, 506, 
+  290, 506, 290, 1302, 290, 1302, 290, 1302, 
+  290, 1298, 290, 1000};
+
+//IR codes for turning OFF the AC unit  
+uint16_t rawDataOff[100]={
+  3114, 1690, 290, 506, 290, 1302, 290, 506, 
+  290, 502, 294, 1298, 290, 506, 290, 1302, 
+  290, 506, 290, 506, 290, 1302, 290, 1302, 
+  286, 1306, 286, 510, 286, 1302, 290, 506, 
+  290, 1302, 290, 1302, 290, 1302, 286, 510, 
+  286, 506, 290, 506, 290, 510, 286, 1302, 
+  290, 1302, 290, 506, 290, 1298, 290, 510, 
+  290, 1298, 290, 1302, 290, 506, 286, 510, 
+  290, 506, 286, 1306, 286, 510, 286, 1302, 
+  290, 510, 286, 506, 290, 1302, 290, 1302, 
+  286, 1306, 286, 1306, 286, 1306, 286, 510, 
+  286, 1302, 290, 1302, 290, 1302, 290, 1302, 
+  286, 1306, 286, 1000};
+
+   
+void loop() {
+  
+  hum = dht.readHumidity();
+  temp= dht.readTemperature();
+  
+  Serial.print("temperature = ");
+  Serial.print(temp); 
+  Serial.println(" C");
+  
+ 
+  lcd.setCursor(0,0); // row 1
+  lcd.print(" Hum = "); // print on the lcd Humidity =  
+  lcd.print(hum);  // to print the humidity
+  lcd.print(" % ");
+  lcd.setCursor(0,1);
+  lcd.print(" Temp = ");  // print on the lcd temp =     
+  lcd.print(temp);  // print on the lcd temperture       
+  lcd.println(" C ");
+
+  
+  //blasts IR codes vai the IR LED to the AC unit being used.
+  if (temp < 20 ) {
+    mySender.send(rawDataOn,100,36);
+    Serial.println(("AC On"));
+    digitalWrite(led, HIGH);
+  }
+  else if (temp > 24 ) {
+    mySender.send(rawDataOff,100,36);
+    Serial.println(("AC Off"));
+    digitalWrite(led, LOW);
+  }
+  delay(5000);
+}
